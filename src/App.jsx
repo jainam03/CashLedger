@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { isFirebaseConfigured } from './firebase/config.js';
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { ThemeProvider } from './contexts/ThemeContext.jsx';
@@ -10,6 +10,7 @@ import Dashboard from './components/Dashboard/Dashboard.jsx';
 import TransactionList from './components/Transactions/TransactionList.jsx';
 import AddTransaction from './components/Transactions/AddTransaction.jsx';
 import AccountManager from './components/Accounts/AccountManager.jsx';
+import ShortcutsModal from './components/common/ShortcutsModal.jsx';
 
 import { LayoutDashboard, ArrowLeftRight, Landmark, Plus, Wrench, ShieldAlert } from 'lucide-react';
 
@@ -45,6 +46,51 @@ function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');
   const [showAddTx, setShowAddTx] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Global Keyboard Shortcuts Listener (Shneiderman Rule 2)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Avoid triggering when user is typing inside input, select, or textarea
+      const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (['input', 'select', 'textarea'].includes(tag)) {
+        if (e.key === 'Escape') {
+          document.activeElement.blur();
+        }
+        return;
+      }
+
+      if (e.key === 'n' || e.key === 'N' || e.key === '+') {
+        e.preventDefault();
+        setShowAddTx(true);
+      } else if (e.key === '1' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        setCurrentView('dashboard');
+      } else if (e.key === '2' || e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        setCurrentView('transactions');
+      } else if (e.key === '3' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        setCurrentView('accounts');
+      } else if (e.key === '/' || e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        setCurrentView('transactions');
+        setTimeout(() => {
+          const searchInput = document.getElementById('tx-search-input');
+          if (searchInput) searchInput.focus();
+        }, 100);
+      } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowShortcuts(true);
+      } else if (e.key === 'Escape') {
+        setShowAddTx(false);
+        setShowShortcuts(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (authLoading) {
     return (
@@ -64,12 +110,14 @@ function AppContent() {
         onNavigate={setCurrentView}
         showAddTx={showAddTx}
         setShowAddTx={setShowAddTx}
+        showShortcuts={showShortcuts}
+        setShowShortcuts={setShowShortcuts}
       />
     </DataProvider>
   );
 }
 
-function AppMain({ currentView, onNavigate, showAddTx, setShowAddTx }) {
+function AppMain({ currentView, onNavigate, showAddTx, setShowAddTx, showShortcuts, setShowShortcuts }) {
   const { loading, error } = useData();
 
   if (error) {
@@ -129,7 +177,7 @@ service cloud.firestore {
 
   return (
     <div className="app-layout">
-      <Navbar currentView={currentView} onNavigate={onNavigate} />
+      <Navbar currentView={currentView} onNavigate={onNavigate} onOpenShortcuts={() => setShowShortcuts(true)} />
       <main className="main-content">
         {currentView === 'dashboard' && <Dashboard onNavigate={onNavigate} />}
         {currentView === 'transactions' && <TransactionList />}
@@ -137,11 +185,12 @@ service cloud.firestore {
       </main>
 
       {/* Floating Action Button */}
-      <button className="fab" onClick={() => setShowAddTx(true)} id="fab-add-transaction" title="Add Transaction">
+      <button className="fab" onClick={() => setShowAddTx(true)} id="fab-add-transaction" title="Add Transaction (Press N)">
         <Plus size={24} className="fab-icon" />
       </button>
 
       <AddTransaction isOpen={showAddTx} onClose={() => setShowAddTx(false)} />
+      <ShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
 
       {/* Mobile Bottom Nav */}
       <nav className="mobile-nav">

@@ -2,14 +2,14 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useData } from '../../contexts/DataContext.jsx';
 import { useToast } from '../common/Toast.jsx';
-import { deleteTransaction, updateTransaction } from '../../firebase/firestore.js';
+import { deleteTransaction, updateTransaction, addTransaction } from '../../firebase/firestore.js';
 import { formatINR } from '../../utils/currency.js';
 import { TRANSACTION_TYPES, PAYMENT_MODES, EXPENSE_CATEGORIES } from '../../utils/constants.js';
 import { Timestamp } from 'firebase/firestore';
 import Modal from '../common/Modal.jsx';
 import {
   ArrowDownLeft, ArrowUpRight, ArrowLeftRight, TrendingUp, Landmark,
-  Pencil, Trash2, FileText, FilterX
+  Pencil, Trash2, FileText, FilterX, Search
 } from 'lucide-react';
 
 function formatDate(dateVal) {
@@ -45,7 +45,8 @@ export default function TransactionList() {
   const { transactions, accounts } = useData();
   const { addToast } = useToast();
 
-  // Filters
+  // Filters & Search
+  const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterAccount, setFilterAccount] = useState('');
@@ -53,7 +54,7 @@ export default function TransactionList() {
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
 
-  // Edit state
+  // Edit & Delete state
   const [editingTx, setEditingTx] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
@@ -68,9 +69,16 @@ export default function TransactionList() {
     return [...cats].sort();
   }, [transactions]);
 
-  // Apply filters
+  // Apply filters & search query (Rule 8 - reduce memory load)
   const filtered = useMemo(() => {
     return transactions.filter((tx) => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const noteMatch = tx.note && tx.note.toLowerCase().includes(q);
+        const catMatch = tx.category && tx.category.toLowerCase().includes(q);
+        const amountMatch = tx.amount.toString().includes(q);
+        if (!noteMatch && !catMatch && !amountMatch) return false;
+      }
       if (filterType && tx.type !== filterType) return false;
       if (filterCategory && tx.category !== filterCategory) return false;
       if (filterAccount && tx.accountId !== filterAccount && tx.toAccountId !== filterAccount) return false;
@@ -85,14 +93,14 @@ export default function TransactionList() {
       }
       return true;
     });
-  }, [transactions, filterType, filterCategory, filterAccount, filterPaymentMode, filterDateFrom, filterDateTo]);
+  }, [transactions, searchQuery, filterType, filterCategory, filterAccount, filterPaymentMode, filterDateFrom, filterDateTo]);
 
   const clearFilters = () => {
-    setFilterType(''); setFilterCategory(''); setFilterAccount('');
+    setSearchQuery(''); setFilterType(''); setFilterCategory(''); setFilterAccount('');
     setFilterPaymentMode(''); setFilterDateFrom(''); setFilterDateTo('');
   };
 
-  const hasActiveFilters = filterType || filterCategory || filterAccount || filterPaymentMode || filterDateFrom || filterDateTo;
+  const hasActiveFilters = searchQuery || filterType || filterCategory || filterAccount || filterPaymentMode || filterDateFrom || filterDateTo;
 
   // Edit handlers
   const openEdit = (tx) => {
@@ -122,22 +130,40 @@ export default function TransactionList() {
         toAccountId: editForm.toAccountId || null,
       };
       await updateTransaction(user.uid, editingTx.id, data);
-      addToast('Transaction updated!', 'success');
+      addToast('Transaction updated successfully!', 'success');
       setEditingTx(null);
     } catch (err) {
       console.error(err);
-      addToast('Failed to update', 'error');
+      addToast('Failed to update transaction', 'error');
     }
   };
 
+  // Rule 6: Reversal of Actions (Undo Delete)
   const handleDelete = async (txId) => {
+    const txToDelete = transactions.find((t) => t.id === txId);
+    if (!txToDelete) return;
+
     try {
       await deleteTransaction(user.uid, txId);
-      addToast('Transaction deleted', 'success');
       setDeleteConfirm(null);
+
+      // Offer Undo capability
+      addToast('Transaction deleted', 'info', 5000, {
+        label: 'Undo',
+        onClick: async () => {
+          try {
+            const { id, ...rest } = txToDelete;
+            await addTransaction(user.uid, rest);
+            addToast('Transaction restored!', 'success');
+          } catch (restoreErr) {
+            console.error(restoreErr);
+            addToast('Failed to restore transaction', 'error');
+          }
+        },
+      });
     } catch (err) {
       console.error(err);
-      addToast('Failed to delete', 'error');
+      addToast('Failed to delete transaction', 'error');
     }
   };
 
@@ -163,6 +189,19 @@ export default function TransactionList() {
 
       {/* Filters */}
       <div className="glass-card filters-bar">
+        <div style={{ position: 'relative', marginBottom: '12px' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+          <input
+            type="text"
+            className="form-input"
+            style={{ paddingLeft: '38px' }}
+            placeholder="Search transactions by note, category, or amount... (Press / to focus)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            id="tx-search-input"
+          />
+        </div>
+
         <div className="filters-grid">
           <select className="form-input filter-input" value={filterType} onChange={(e) => setFilterType(e.target.value)} id="filter-type">
             <option value="">All Types</option>
@@ -183,8 +222,9 @@ export default function TransactionList() {
           <input type="date" className="form-input filter-input" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} placeholder="From" id="filter-date-from" />
           <input type="date" className="form-input filter-input" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} placeholder="To" id="filter-date-to" />
         </div>
+
         {hasActiveFilters && (
-          <button className="btn-link flex-center gap-1" onClick={clearFilters}>
+          <button className="btn-link flex-center gap-1" onClick={clearFilters} style={{ marginTop: '8px' }}>
             <FilterX size={16} /> Clear Filters
           </button>
         )}
@@ -193,7 +233,7 @@ export default function TransactionList() {
       {/* Transaction List */}
       <div className="glass-card">
         {filtered.length === 0 ? (
-          <p className="empty-state">No transactions match your filters</p>
+          <p className="empty-state">No transactions match your search or filters</p>
         ) : (
           <div className="tx-list">
             {filtered.map((tx) => {
@@ -263,9 +303,11 @@ export default function TransactionList() {
         )}
       </Modal>
 
-      {/* Delete Confirmation */}
+      {/* Delete Confirmation (Rule 7 - Support Internal Locus of Control) */}
       <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="Delete Transaction">
-        <p>Are you sure? This will reverse the balance changes from this transaction.</p>
+        <p style={{ lineHeight: '1.6', color: 'var(--text-secondary)' }}>
+          Are you sure you want to delete this transaction? It will automatically adjust your balances. You can undo this action immediately after deleting.
+        </p>
         <div className="modal-actions">
           <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>Cancel</button>
           <button className="btn btn-danger" onClick={() => handleDelete(deleteConfirm)}>Delete</button>

@@ -4,10 +4,11 @@ import { useData } from '../../contexts/DataContext.jsx';
 import { useToast } from '../common/Toast.jsx';
 import { addTransaction } from '../../firebase/firestore.js';
 import { computeAccountBalance } from '../../utils/calculations.js';
+import { formatINR } from '../../utils/currency.js';
 import { TRANSACTION_TYPES, PAYMENT_MODES, EXPENSE_CATEGORIES, INVESTMENT_TYPES } from '../../utils/constants.js';
 import { Timestamp } from 'firebase/firestore';
 import Modal from '../common/Modal.jsx';
-import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, TrendingUp, Landmark } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, ArrowLeftRight, TrendingUp, Landmark, Info } from 'lucide-react';
 
 const initialForm = {
   type: 'expense',
@@ -41,12 +42,16 @@ export default function AddTransaction({ isOpen, onClose }) {
   const [form, setForm] = useState(initialForm);
   const [showOverdraftWarning, setShowOverdraftWarning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const bankAccounts = accounts.filter((a) => a.type === 'bank');
   const cashAccounts = accounts.filter((a) => a.type === 'cash');
   const allNonInvestment = accounts.filter((a) => a.type !== 'investment');
 
-  const update = (field, value) => setForm((f) => ({ ...f, [field]: value }));
+  const update = (field, value) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    if (errors[field]) setErrors((e) => ({ ...e, [field]: null }));
+  };
 
   // Determine which account will be debited based on type and payment mode
   const getSourceAccount = () => {
@@ -57,19 +62,30 @@ export default function AddTransaction({ isOpen, onClose }) {
     return accounts.find((a) => a.id === form.accountId);
   };
 
-  const handleSubmit = async (forceProceed = false) => {
-    const amount = parseFloat(form.amount);
-    if (!amount || amount <= 0) {
-      addToast('Please enter a valid amount', 'error');
-      return;
-    }
+  const selectedSourceAccount = getSourceAccount();
+  const sourceAccountBalance = selectedSourceAccount ? computeAccountBalance(selectedSourceAccount, transactions) : null;
 
-    // Check overdraft for debit transactions
+  const validate = () => {
+    const newErrors = {};
+    const amount = parseFloat(form.amount);
+    if (!form.amount || isNaN(amount) || amount <= 0) {
+      newErrors.amount = 'Please enter a valid amount greater than ₹0';
+    }
+    if (form.type === 'expense' && !form.category) {
+      newErrors.category = 'Please select a category';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (forceProceed = false) => {
+    if (!validate()) return;
+    const amount = parseFloat(form.amount);
+
+    // Check overdraft for debit transactions (Rule 5 & 7)
     if (!forceProceed && ['expense', 'withdrawal', 'transfer', 'investment'].includes(form.type)) {
-      const sourceAcc = getSourceAccount();
-      if (sourceAcc) {
-        const balance = computeAccountBalance(sourceAcc, transactions);
-        if (amount > balance) {
+      if (selectedSourceAccount) {
+        if (amount > sourceAccountBalance) {
           setShowOverdraftWarning(true);
           return;
         }
@@ -80,7 +96,6 @@ export default function AddTransaction({ isOpen, onClose }) {
     try {
       const category = form.category === '__custom__' ? form.customCategory : form.category;
 
-      // Determine accountId and toAccountId based on type
       let accountId = form.accountId;
       let toAccountId = form.toAccountId || null;
 
@@ -111,7 +126,7 @@ export default function AddTransaction({ isOpen, onClose }) {
       };
 
       await addTransaction(user.uid, tx);
-      addToast('Transaction added successfully!', 'success');
+      addToast('Transaction recorded successfully!', 'success');
       setForm(initialForm);
       onClose();
     } catch (err) {
@@ -123,7 +138,6 @@ export default function AddTransaction({ isOpen, onClose }) {
     }
   };
 
-  // Auto-select default accounts when type changes
   const handleTypeChange = (type) => {
     const defaults = { ...initialForm, type, date: form.date };
     if (type === 'income') defaults.accountId = bankAccounts.find((a) => a.isPrimary)?.id || bankAccounts[0]?.id || '';
@@ -132,15 +146,18 @@ export default function AddTransaction({ isOpen, onClose }) {
     if (type === 'transfer') { defaults.accountId = bankAccounts[0]?.id || ''; }
     if (type === 'investment') defaults.accountId = bankAccounts[0]?.id || '';
     setForm(defaults);
+    setErrors({});
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
-      {/* Overdraft warning */}
       {showOverdraftWarning && (
         <div className="overdraft-warning">
-          <p>⚠️ This amount exceeds the source account's current balance. Proceed anyway?</p>
-          <div className="overdraft-actions">
+          <p style={{ fontWeight: '600', marginBottom: '8px' }}>⚠️ Overdraft Warning</p>
+          <p>
+            Amount ({formatINR(form.amount)}) exceeds {selectedSourceAccount?.name}'s balance ({formatINR(sourceAccountBalance)}). Do you wish to proceed anyway?
+          </p>
+          <div className="overdraft-actions" style={{ marginTop: '16px' }}>
             <button className="btn btn-secondary" onClick={() => setShowOverdraftWarning(false)}>Cancel</button>
             <button className="btn btn-danger" onClick={() => handleSubmit(true)}>Proceed Anyway</button>
           </div>
@@ -149,7 +166,6 @@ export default function AddTransaction({ isOpen, onClose }) {
 
       {!showOverdraftWarning && (
         <form className="tx-form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-          {/* Type Selector */}
           <div className="tx-type-selector">
             {TRANSACTION_TYPES.map((t) => (
               <button
@@ -165,12 +181,11 @@ export default function AddTransaction({ isOpen, onClose }) {
             ))}
           </div>
 
-          {/* Amount */}
           <div className="form-group">
             <label className="form-label">Amount (₹)</label>
             <input
               type="number"
-              className="form-input amount-input"
+              className={`form-input amount-input ${errors.amount ? 'form-input-error' : ''}`}
               placeholder="0"
               value={form.amount}
               onChange={(e) => update('amount', e.target.value)}
@@ -179,9 +194,9 @@ export default function AddTransaction({ isOpen, onClose }) {
               autoFocus
               id="tx-amount-input"
             />
+            {errors.amount && <p className="form-error-msg">{errors.amount}</p>}
           </div>
 
-          {/* Date */}
           <div className="form-group">
             <label className="form-label">Date</label>
             <input
@@ -193,7 +208,6 @@ export default function AddTransaction({ isOpen, onClose }) {
             />
           </div>
 
-          {/* Type-specific fields */}
           {form.type === 'income' && (
             <>
               <div className="form-group">
@@ -236,14 +250,25 @@ export default function AddTransaction({ isOpen, onClose }) {
                   </select>
                 </div>
               )}
+
+              {/* Memory Cue: Display live available account balance (Rule 8) */}
+              {selectedSourceAccount && sourceAccountBalance !== null && (
+                <div className="form-hint flex-center gap-1" style={{ justifyContent: 'flex-start', color: 'var(--accent)', marginTop: '-8px', marginBottom: '12px' }}>
+                  <Info size={14} />
+                  <span>Available in <strong>{selectedSourceAccount.name}</strong>: {formatINR(sourceAccountBalance)}</span>
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Category</label>
-                <select className="form-input" value={form.category} onChange={(e) => update('category', e.target.value)} id="tx-category-select">
+                <select className={`form-input ${errors.category ? 'form-input-error' : ''}`} value={form.category} onChange={(e) => update('category', e.target.value)} id="tx-category-select">
                   <option value="">Select category</option>
                   {EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   <option value="__custom__">+ Custom</option>
                 </select>
+                {errors.category && <p className="form-error-msg">{errors.category}</p>}
               </div>
+
               {form.category === '__custom__' && (
                 <div className="form-group">
                   <label className="form-label">Custom Category</label>
@@ -312,7 +337,6 @@ export default function AddTransaction({ isOpen, onClose }) {
             </>
           )}
 
-          {/* Note */}
           <div className="form-group">
             <label className="form-label">Note (optional)</label>
             <input className="form-input" placeholder="Add a note..." value={form.note} onChange={(e) => update('note', e.target.value)} id="tx-note-input" />

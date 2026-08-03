@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { signOut } from '../../firebase/auth.js';
-import { LayoutDashboard, ArrowLeftRight, Landmark, Sun, Moon, LogOut, Wallet, Menu, X } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Landmark, Sun, Moon, LogOut, Wallet, Menu, X, Keyboard } from 'lucide-react';
 
-export default function Navbar({ currentView, onNavigate }) {
+export default function Navbar({ currentView, onNavigate, onOpenShortcuts }) {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -49,6 +49,10 @@ export default function Navbar({ currentView, onNavigate }) {
 
       {/* Desktop Actions */}
       <div className="navbar-actions">
+        <button className="btn-icon" onClick={onOpenShortcuts} id="shortcuts-toggle" title="Keyboard Shortcuts (?)">
+          <Keyboard size={18} />
+        </button>
+
         <button className="btn-icon" onClick={toggleTheme} id="theme-toggle" title="Toggle theme">
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
@@ -110,6 +114,10 @@ export default function Navbar({ currentView, onNavigate }) {
           </div>
 
           <div className="mobile-drawer-footer">
+            <button className="mobile-drawer-btn" onClick={onOpenShortcuts}>
+              <Keyboard size={18} />
+              <span>Keyboard Shortcuts</span>
+            </button>
             <button className="mobile-drawer-btn" onClick={toggleTheme}>
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               <span>Switch to {theme === 'dark' ? 'Light' : 'Dark'} Mode</span>

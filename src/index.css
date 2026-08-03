@@ -226,11 +226,17 @@ input,select,button{font-family:inherit;font-size:inherit}
 
 /* ===== Toast ===== */
 .toast-container{position:fixed;top:80px;right:20px;z-index:300;display:flex;flex-direction:column;gap:8px}
-.toast{padding:12px 20px;border-radius:12px;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:8px;animation:slideIn .3s;backdrop-filter:blur(12px);box-shadow:var(--shadow)}
+.toast{padding:12px 20px;border-radius:12px;font-size:.85rem;font-weight:500;display:flex;align-items:center;gap:10px;animation:slideIn .3s;backdrop-filter:blur(12px);box-shadow:var(--shadow)}
 .toast-success{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);color:var(--green)}
 .toast-error{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);color:var(--red)}
 .toast-info{background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);color:var(--accent)}
-.toast-icon{font-weight:700}
+.toast-icon{display:flex;align-items:center;justify-content:center}
+.toast-message{flex:1}
+.toast-action-btn{display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:600;font-size:.75rem;cursor:pointer;transition:all .2s;margin-left:8px}
+.toast-action-btn:hover{opacity:.9;transform:scale(1.05)}
+
+.form-input-error{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(239,68,68,.2)!important}
+.form-error-msg{font-size:.75rem;color:var(--red);margin-top:4px;font-weight:500}
 
 /* ===== Mobile Bottom Nav ===== */
 .mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--glass-bg);backdrop-filter:blur(16px);border-top:1px solid var(--glass-border);padding:8px 0;z-index:100}
