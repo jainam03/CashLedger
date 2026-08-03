@@ -3,12 +3,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyC424Dv1kTsqYsgnkJZ6mLSX6ha0vzaoS4',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'cashledger-75e4e.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'cashledger-75e4e',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'cashledger-75e4e.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '410774611421',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:410774611421:web:d87d19ed745ac0abc78234',
 };
 
 // Check if Firebase config is properly set
