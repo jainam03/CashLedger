@@ -1,13 +1,32 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '../../contexts/ThemeContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { signOut } from '../../firebase/auth.js';
-import { LayoutDashboard, ArrowLeftRight, Landmark, Sun, Moon, LogOut, Wallet, Menu, X, Keyboard } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Landmark, Sun, Moon, LogOut, Wallet, Menu, X, Keyboard, Download } from 'lucide-react';
 
 export default function Navbar({ currentView, onNavigate, onOpenShortcuts }) {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   const navItems = [
     { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -49,20 +68,26 @@ export default function Navbar({ currentView, onNavigate, onOpenShortcuts }) {
 
       {/* Desktop Actions */}
       <div className="navbar-actions">
-        <button className="btn-icon" onClick={onOpenShortcuts} id="shortcuts-toggle" title="Keyboard Shortcuts (?)">
+        {installPrompt && (
+          <button className="btn-icon" onClick={handleInstallApp} id="pwa-install-btn" title="Install CashLedger App" aria-label="Install CashLedger App" style={{ background: 'var(--accent-glow)', color: 'var(--accent)', borderColor: 'var(--accent)' }}>
+            <Download size={18} />
+          </button>
+        )}
+
+        <button className="btn-icon" onClick={onOpenShortcuts} id="shortcuts-toggle" title="Keyboard Shortcuts (?)" aria-label="Keyboard Shortcuts">
           <Keyboard size={18} />
         </button>
 
-        <button className="btn-icon" onClick={toggleTheme} id="theme-toggle" title="Toggle theme">
+        <button className="btn-icon" onClick={toggleTheme} id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
         </button>
 
         {user && (
           <div className="navbar-user">
             {user.photoURL && (
-              <img src={user.photoURL} alt="" className="navbar-avatar" referrerPolicy="no-referrer" />
+              <img src={user.photoURL} alt="User Profile Avatar" className="navbar-avatar" referrerPolicy="no-referrer" />
             )}
-            <button className="btn-signout" onClick={signOut} id="sign-out-btn" title="Sign Out">
+            <button className="btn-signout" onClick={signOut} id="sign-out-btn" title="Sign Out" aria-label="Sign Out">
               <LogOut size={16} />
               <span className="btn-signout-text">Sign Out</span>
             </button>
@@ -114,6 +139,12 @@ export default function Navbar({ currentView, onNavigate, onOpenShortcuts }) {
           </div>
 
           <div className="mobile-drawer-footer">
+            {installPrompt && (
+              <button className="mobile-drawer-btn" onClick={handleInstallApp} style={{ color: 'var(--accent)', borderColor: 'var(--accent)' }}>
+                <Download size={18} />
+                <span>Install CashLedger App</span>
+              </button>
+            )}
             <button className="mobile-drawer-btn" onClick={onOpenShortcuts}>
               <Keyboard size={18} />
               <span>Keyboard Shortcuts</span>

@@ -185,7 +185,7 @@ service cloud.firestore {
       </main>
 
       {/* Floating Action Button */}
-      <button className="fab" onClick={() => setShowAddTx(true)} id="fab-add-transaction" title="Add Transaction (Press N)">
+      <button className="fab" onClick={() => setShowAddTx(true)} id="fab-add-transaction" title="Add Transaction (Press N)" aria-label="Add Transaction">
         <Plus size={24} className="fab-icon" />
       </button>
 

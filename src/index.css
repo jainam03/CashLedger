@@ -273,20 +273,26 @@ button:active,.nav-link:active,.btn-icon:active,.fab:active,.mobile-nav-btn:acti
   }
   
   /* Disable heavy live GPU blurs during mobile scroll to prevent frame drops */
-  .glass-card, .summary-card, .account-card, .navbar {
+  .glass-card, .summary-card, .account-card, .navbar, .login-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
 
+  .login-bg-orb {
+    display: none !important;
+  }
+
   [data-theme="dark"] .glass-card,
   [data-theme="dark"] .summary-card,
-  [data-theme="dark"] .account-card {
+  [data-theme="dark"] .account-card,
+  [data-theme="dark"] .login-card {
     background: rgba(15, 20, 53, 0.95);
   }
 
   [data-theme="light"] .glass-card,
   [data-theme="light"] .summary-card,
-  [data-theme="light"] .account-card {
+  [data-theme="light"] .account-card,
+  [data-theme="light"] .login-card {
     background: rgba(240, 244, 255, 0.95);
   }
 
