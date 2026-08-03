@@ -2,15 +2,25 @@
 :root{--font-display:'Playfair Display',serif;--font-body:'Inter',sans-serif;--font-mono:'JetBrains Mono',monospace}
 [data-theme="dark"]{--bg:#0a0e27;--bg2:#0f1435;--surface:rgba(255,255,255,.06);--surface2:rgba(255,255,255,.1);--border:rgba(255,255,255,.1);--text-primary:#f1f5f9;--text-secondary:#94a3b8;--accent:#3b82f6;--accent-glow:rgba(59,130,246,.3);--green:#22c55e;--red:#ef4444;--yellow:#f59e0b;--purple:#8b5cf6;--glass-bg:rgba(15,20,53,.7);--glass-border:rgba(255,255,255,.08);--shadow:0 8px 32px rgba(0,0,0,.4)}
 [data-theme="light"]{--bg:#f0f4ff;--bg2:#e8eeff;--surface:rgba(255,255,255,.7);--surface2:rgba(255,255,255,.9);--border:rgba(0,0,0,.08);--text-primary:#1e293b;--text-secondary:#64748b;--accent:#2563eb;--accent-glow:rgba(37,99,235,.2);--green:#16a34a;--red:#dc2626;--yellow:#d97706;--purple:#7c3aed;--glass-bg:rgba(255,255,255,.6);--glass-border:rgba(0,0,0,.06);--shadow:0 8px 32px rgba(0,0,0,.08)}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch}
-body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary);min-height:100vh;transition:background .3s,color .3s;overflow-x:hidden}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;touch-action:pan-y}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text-primary);min-height:100vh;transition:background .3s,color .3s;overflow-x:hidden;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 h1,h2,h3{font-family:var(--font-display);font-weight:700}
-input,select,button{font-family:inherit;font-size:inherit}
+input,select,button,a{font-family:inherit;font-size:inherit;touch-action:manipulation}
 *{scroll-behavior:smooth}
 
+button,a,select,input,.nav-link,.pm-btn,.tx-type-btn,.btn-icon,.hamburger-btn,.mobile-drawer-btn,.mobile-nav-btn,.fab,.summary-card,.account-card,.tx-row{
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+
+button:active,.nav-link:active,.btn-icon:active,.fab:active,.mobile-nav-btn:active,.pm-btn:active,.tx-type-btn:active,.mobile-drawer-btn:active{
+  transform:scale(0.96)!important;
+  transition:transform 0.05s cubic-bezier(0.4,0,0.2,1)!important;
+}
+
 /* ===== Glass Card ===== */
-.glass-card{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:16px;padding:24px;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+.glass-card{background:var(--glass-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--glass-border);border-radius:16px;padding:24px;box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease;will-change:transform}
 .glass-card:hover{transform:translateY(-2px);box-shadow:var(--shadow),0 0 20px var(--accent-glow)}
 
 /* ===== Loading ===== */
@@ -249,13 +259,37 @@ input,select,button{font-family:inherit;font-size:inherit}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
 
-/* ===== Responsive ===== */
+/* ===== Responsive & Mobile Touch Performance ===== */
 @media(min-width:769px){
   .mobile-nav{display:none!important}
   .fab{bottom:32px}
   .app-layout{padding-bottom:0}
 }
 @media(max-width:768px){
+  /* Hardware Acceleration & Fluid Mobile Scroll */
+  .navbar, .mobile-nav, .fab, .mobile-menu-drawer {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  
+  /* Disable heavy live GPU blurs during mobile scroll to prevent frame drops */
+  .glass-card, .summary-card, .account-card, .navbar {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  [data-theme="dark"] .glass-card,
+  [data-theme="dark"] .summary-card,
+  [data-theme="dark"] .account-card {
+    background: rgba(15, 20, 53, 0.95);
+  }
+
+  [data-theme="light"] .glass-card,
+  [data-theme="light"] .summary-card,
+  [data-theme="light"] .account-card {
+    background: rgba(240, 244, 255, 0.95);
+  }
+
   .navbar-links{display:none}
   .btn-signout{display:none}
   .hamburger-btn{display:flex}
@@ -266,7 +300,7 @@ input,select,button{font-family:inherit;font-size:inherit}
   .main-content{padding:16px 12px}
   .summary-card-value{font-size:1.1rem}
   .page-title{font-size:1.4rem}
-  .fab{bottom:80px;right:16px;width:50px;height:50px;font-size:1.6rem}
+  .fab{bottom:80px;right:16px;width:52px;height:52px;font-size:1.6rem}
   .filters-grid{grid-template-columns:1fr 1fr}
   .tx-actions{opacity:1}
   .modal-content{max-height:90vh;border-radius:16px}
