@@ -9,7 +9,8 @@ export const TRANSACTION_TYPES = [
 export const PAYMENT_MODES = [
   { value: 'cash', label: 'Cash' },
   { value: 'debit_card', label: 'Debit Card' },
-  { value: 'upi', label: 'UPI' },
+  { value: 'upi', label: 'UPI (Personal)' },
+  { value: 'upi_circle', label: 'UPI Circle (Delegated)' },
   { value: 'netbanking', label: 'Net Banking' },
 ];
 
@@ -34,5 +35,6 @@ export const INVESTMENT_TYPES = [
 export const ACCOUNT_TYPES = [
   { value: 'bank', label: 'Bank Account' },
   { value: 'cash', label: 'Cash' },
+  { value: 'upi_circle', label: 'UPI Circle (Delegated)' },
   { value: 'investment', label: 'Investment' },
 ];

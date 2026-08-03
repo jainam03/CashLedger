@@ -179,7 +179,7 @@ service cloud.firestore {
     <div className="app-layout">
       <Navbar currentView={currentView} onNavigate={onNavigate} onOpenShortcuts={() => setShowShortcuts(true)} />
       <main className="main-content">
-        {currentView === 'dashboard' && <Dashboard onNavigate={onNavigate} />}
+        {currentView === 'dashboard' && <Dashboard onNavigate={onNavigate} onOpenAddTransaction={() => setShowAddTx(true)} />}
         {currentView === 'transactions' && <TransactionList />}
         {currentView === 'accounts' && <AccountManager />}
       </main>

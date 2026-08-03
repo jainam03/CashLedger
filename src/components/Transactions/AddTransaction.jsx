@@ -53,10 +53,13 @@ export default function AddTransaction({ isOpen, onClose }) {
     if (errors[field]) setErrors((e) => ({ ...e, [field]: null }));
   };
 
+  const upiCircleAccount = accounts.find((a) => a.type === 'upi_circle');
+
   // Determine which account will be debited based on type and payment mode
   const getSourceAccount = () => {
     if (form.type === 'expense') {
       if (form.paymentMode === 'cash') return cashAccounts[0];
+      if (form.paymentMode === 'upi_circle') return upiCircleAccount || { name: 'UPI Circle (Parent)', balance: 2500 };
       return accounts.find((a) => a.id === form.accountId) || bankAccounts[0];
     }
     return accounts.find((a) => a.id === form.accountId);
@@ -73,6 +76,9 @@ export default function AddTransaction({ isOpen, onClose }) {
     }
     if (form.type === 'expense' && !form.category) {
       newErrors.category = 'Please select a category';
+    }
+    if (['income', 'withdrawal', 'transfer'].includes(form.type) && form.accountId === upiCircleAccount?.id) {
+      newErrors.amount = 'UPI Circle cannot receive incoming money or handle transfers. Only outgoing expenses can be logged.';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -102,6 +108,8 @@ export default function AddTransaction({ isOpen, onClose }) {
       if (form.type === 'expense') {
         if (form.paymentMode === 'cash') {
           accountId = cashAccounts[0]?.id || '';
+        } else if (form.paymentMode === 'upi_circle') {
+          accountId = upiCircleAccount?.id || '';
         } else {
           accountId = form.accountId || bankAccounts[0]?.id || '';
         }
@@ -153,9 +161,9 @@ export default function AddTransaction({ isOpen, onClose }) {
     <Modal isOpen={isOpen} onClose={onClose} title="Add Transaction">
       {showOverdraftWarning && (
         <div className="overdraft-warning">
-          <p style={{ fontWeight: '600', marginBottom: '8px' }}>⚠️ Overdraft Warning</p>
+          <p style={{ fontWeight: '600', marginBottom: '8px' }}>⚠️ Limit / Balance Warning</p>
           <p>
-            Amount ({formatINR(form.amount)}) exceeds {selectedSourceAccount?.name}'s balance ({formatINR(sourceAccountBalance)}). Do you wish to proceed anyway?
+            Amount ({formatINR(form.amount)}) exceeds {selectedSourceAccount?.name}'s available allowance/balance ({formatINR(sourceAccountBalance)}). Do you wish to proceed anyway?
           </p>
           <div className="overdraft-actions" style={{ marginTop: '16px' }}>
             <button className="btn btn-secondary" onClick={() => setShowOverdraftWarning(false)}>Cancel</button>
@@ -214,7 +222,7 @@ export default function AddTransaction({ isOpen, onClose }) {
                 <label className="form-label">Destination Account</label>
                 <select className="form-input" value={form.accountId} onChange={(e) => update('accountId', e.target.value)} id="tx-dest-account">
                   <option value="">Select account</option>
-                  {allNonInvestment.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  {allNonInvestment.filter((a) => a.type !== 'upi_circle').map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -241,7 +249,7 @@ export default function AddTransaction({ isOpen, onClose }) {
                   ))}
                 </div>
               </div>
-              {form.paymentMode !== 'cash' && (
+              {form.paymentMode !== 'cash' && form.paymentMode !== 'upi_circle' && (
                 <div className="form-group">
                   <label className="form-label">From Bank Account</label>
                   <select className="form-input" value={form.accountId} onChange={(e) => update('accountId', e.target.value)} id="tx-bank-select">
@@ -251,11 +259,17 @@ export default function AddTransaction({ isOpen, onClose }) {
                 </div>
               )}
 
-              {/* Memory Cue: Display live available account balance (Rule 8) */}
+              {/* Memory Cue: Display live available account balance / UPI Circle limit */}
               {selectedSourceAccount && sourceAccountBalance !== null && (
-                <div className="form-hint flex-center gap-1" style={{ justifyContent: 'flex-start', color: 'var(--accent)', marginTop: '-8px', marginBottom: '12px' }}>
+                <div className="form-hint flex-center gap-1" style={{ justifyContent: 'flex-start', color: form.paymentMode === 'upi_circle' ? 'var(--purple)' : 'var(--accent)', marginTop: '-8px', marginBottom: '12px' }}>
                   <Info size={14} />
-                  <span>Available in <strong>{selectedSourceAccount.name}</strong>: {formatINR(sourceAccountBalance)}</span>
+                  <span>
+                    {form.paymentMode === 'upi_circle' ? (
+                      <>Available UPI Circle Allowance (Cycle 19th-18th): <strong>{formatINR(sourceAccountBalance)}</strong></>
+                    ) : (
+                      <>Available in <strong>{selectedSourceAccount.name}</strong>: {formatINR(sourceAccountBalance)}</>
+                    )}
+                  </span>
                 </div>
               )}
 

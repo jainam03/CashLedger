@@ -8,7 +8,7 @@ import { ACCOUNT_TYPES, TRANSACTION_TYPES } from '../../utils/constants.js';
 import Modal from '../common/Modal.jsx';
 import {
   Landmark, Banknote, TrendingUp, CreditCard, Plus, Star, Eye, Trash2,
-  ArrowDownLeft, ArrowUpRight, ArrowLeftRight
+  ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Users
 } from 'lucide-react';
 
 export default function AccountManager() {
@@ -19,6 +19,8 @@ export default function AccountManager() {
   const [showAdd, setShowAdd] = useState(false);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState('bank');
+  const [monthlyLimit, setMonthlyLimit] = useState(2500);
+  const [resetDay, setResetDay] = useState(19);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [viewAccount, setViewAccount] = useState(null);
 
@@ -27,6 +29,7 @@ export default function AccountManager() {
       case 'bank': return <Landmark size={22} className="text-accent" />;
       case 'cash': return <Banknote size={22} className="text-green" />;
       case 'investment': return <TrendingUp size={22} className="text-purple" />;
+      case 'upi_circle': return <Users size={22} className="text-purple" />;
       default: return <CreditCard size={22} />;
     }
   };
@@ -49,6 +52,8 @@ export default function AccountManager() {
       await addAccount(user.uid, {
         name: newName.trim(),
         type: newType,
+        monthlyLimit: newType === 'upi_circle' ? parseFloat(monthlyLimit) || 2500 : null,
+        resetDay: newType === 'upi_circle' ? parseInt(resetDay, 10) || 19 : null,
         openingBalance: 0,
         isPrimary: false,
       });
@@ -91,7 +96,7 @@ export default function AccountManager() {
   };
 
   const accountTxs = viewAccount
-    ? transactions.filter((tx) => tx.accountId === viewAccount.id || tx.toAccountId === viewAccount.id)
+    ? transactions.filter((tx) => tx.accountId === viewAccount.id || tx.toAccountId === viewAccount.id || (viewAccount.type === 'upi_circle' && tx.paymentMode === 'upi_circle'))
     : [];
 
   const getAccountBalance = (accId) => {
@@ -135,9 +140,15 @@ export default function AccountManager() {
             <h3 className="account-card-name">
               {acc.name}
               {acc.isPrimary && <span className="badge-primary">Primary</span>}
+              {acc.type === 'upi_circle' && <span className="badge-primary" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>Delegated Allowance</span>}
             </h3>
-            <p className="account-card-type">{acc.type}</p>
-            <div className="account-card-balance">{formatINR(acc.balance)}</div>
+            <p className="account-card-type">
+              {acc.type === 'upi_circle' ? `UPI Circle • Resets on ${acc.resetDay || 19}th` : acc.type}
+            </p>
+            <div className="account-card-balance">
+              {formatINR(acc.balance)}
+              {acc.type === 'upi_circle' && <span style={{ fontSize: '0.75rem', display: 'block', color: 'var(--text-secondary)', fontWeight: 'normal' }}>remaining of {formatINR(acc.monthlyLimit || 2500)}</span>}
+            </div>
           </div>
         ))}
       </div>
@@ -147,7 +158,7 @@ export default function AccountManager() {
         <div className="tx-form">
           <div className="form-group">
             <label className="form-label">Account Name</label>
-            <input className="form-input" placeholder="e.g. New UPI Account" value={newName}
+            <input className="form-input" placeholder="e.g. Parent UPI Circle" value={newName}
               onChange={(e) => setNewName(e.target.value)} id="new-account-name" />
           </div>
           <div className="form-group">
@@ -156,6 +167,18 @@ export default function AccountManager() {
               {ACCOUNT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
+          {newType === 'upi_circle' && (
+            <>
+              <div className="form-group">
+                <label className="form-label">Monthly Limit (₹)</label>
+                <input type="number" className="form-input" value={monthlyLimit} onChange={(e) => setMonthlyLimit(e.target.value)} placeholder="2500" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Monthly Reset Day (1 to 28)</label>
+                <input type="number" min="1" max="28" className="form-input" value={resetDay} onChange={(e) => setResetDay(e.target.value)} placeholder="19" />
+              </div>
+            </>
+          )}
           <button className="btn btn-primary btn-full" onClick={handleAdd}>Create Account</button>
         </div>
       </Modal>

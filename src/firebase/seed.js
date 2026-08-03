@@ -24,6 +24,15 @@ export async function seedInitialData(uid) {
     isPrimary: false,
   });
 
+  const upiCircleRef = await addAccount(uid, {
+    name: 'UPI Circle (Parent)',
+    type: 'upi_circle',
+    monthlyLimit: 2500,
+    resetDay: 19,
+    openingBalance: 2500,
+    isPrimary: false,
+  });
+
   const baseDate = new Date('2026-07-15');
 
   // Transaction 1: Stipend income → Bank

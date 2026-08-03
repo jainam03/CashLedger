@@ -1,11 +1,12 @@
 import SummaryCards from './SummaryCards.jsx';
 import BalanceCheck from './BalanceCheck.jsx';
 import StipendProgress from './StipendProgress.jsx';
+import UpiCircleTracker from './UpiCircleTracker.jsx';
 import CategoryBreakdown from './CategoryBreakdown.jsx';
 import AccountBreakdown from './AccountBreakdown.jsx';
 import RecentTransactions from './RecentTransactions.jsx';
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, onOpenAddTransaction }) {
   return (
     <div className="dashboard">
       <div className="dashboard-header">
@@ -14,6 +15,7 @@ export default function Dashboard({ onNavigate }) {
       </div>
       <BalanceCheck />
       <StipendProgress />
+      <UpiCircleTracker onLogUpiExpense={onOpenAddTransaction} />
       <SummaryCards />
       <div className="dashboard-grid">
         <CategoryBreakdown />
